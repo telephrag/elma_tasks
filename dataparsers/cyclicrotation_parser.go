@@ -1,0 +1,5 @@
+package dataparsers
+
+func ParseForCyclicRotation() {
+
+}
