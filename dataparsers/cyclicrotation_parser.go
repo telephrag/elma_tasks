@@ -1,5 +1,0 @@
-package dataparsers
-
-func ParseForCyclicRotation() {
-
-}

@@ -1,8 +1,6 @@
 package models
 
-type CyclicRotationData struct {
-	K   int
-	Arr []int
+type CyclicRotationData struct { // TODO: Decide if this model is needed.
+	Arr []interface{}
+	K   float64
 }
-
-type CycliclRotationContainer []CyclicRotationData

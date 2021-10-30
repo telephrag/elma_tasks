@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"mservice/config"
-	"mservice/models"
+	"mservice/dataparsers"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -55,14 +55,16 @@ func SolveTaskService(ctx context.Context) http.Handler {
 			rw.Write(append([]byte("Received data: "), content...))
 
 			// TODO: Make it more "task agnostic"
-			data := models.CycliclRotationContainer{}
-			err = json.Unmarshal(content, &data) // doesn't work with squre brackets
+			var data [][]interface{}
+			err = json.Unmarshal(content, &data)
 			if err != nil {
 				rw.Write([]byte(err.Error()))
 				rw.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
+			parsed := dataparsers.ParseForCyclicRotation(data)
+			fmt.Println(parsed)
 		},
 	)
 
