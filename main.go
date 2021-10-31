@@ -21,7 +21,7 @@ func main() {
 	go func(taskCtx context.Context) {
 		err := http.ListenAndServe(
 			config.LocalAddr,
-			services.SolveTaskService(taskCtx),
+			services.GetTaskDataService(taskCtx),
 		)
 
 		if err != nil {
@@ -31,6 +31,6 @@ func main() {
 	}(taskCtx)
 
 	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT) // stop with "Ctrl+C"
+	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT)
 	<-interrupt
 }
