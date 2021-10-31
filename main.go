@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"mservice/config"
 	"mservice/services"
 	"net/http"
@@ -11,24 +10,18 @@ import (
 )
 
 func main() {
-	rootCtx := context.Background()
 
-	// TODO: make task selection
-	var taskName string = config.CycliclShift
-	taskCtx := context.WithValue(rootCtx, "name", taskName) // TODO: decide what to do with key
-	//services.SolveTaskService(taskCtx)
-
-	go func(taskCtx context.Context) {
+	go func() {
 		err := http.ListenAndServe(
 			config.LocalAddr,
-			services.GetTaskDataService(taskCtx),
+			services.GetTaskDataAndSolveService(),
 		)
 
 		if err != nil {
 			// TODO: add error handling
 		}
 
-	}(taskCtx)
+	}()
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT)
