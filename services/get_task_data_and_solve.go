@@ -62,9 +62,11 @@ func GetTaskDataAndSolveService() http.Handler {
 				return
 			}
 
+			var resA [][][]float64
+			var resK []float64
 			rootCtx := context.Background()
 			taskCtx := context.WithValue(rootCtx, "name", taskName)
-			go solver_wrappers.Solve(data, taskCtx)
+			go solver_wrappers.SelectWrapper(data, taskCtx) // TODO: Reuse content when sending response to server
 		},
 	)
 
