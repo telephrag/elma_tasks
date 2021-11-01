@@ -6,11 +6,11 @@ import (
 	"mservice/config"
 )
 
-func SelectWrapper(data [][]interface{}, ctx context.Context) error {
+func Solve(data [][]interface{}, ctx context.Context) error {
 
 	switch ctx.Value("name") {
 	case config.CycliclShift:
-		resa, resk, err := SolveForCyclicRotation(data)
+		err := SolveForCyclicRotation(data)
 		if err != nil {
 			return errors.New("failed during task solving")
 		}
