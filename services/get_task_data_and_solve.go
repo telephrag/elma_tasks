@@ -1,11 +1,13 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"mservice/config"
+	"mservice/models"
 	"mservice/solver_wrappers"
 	"net/http"
 
@@ -18,38 +20,41 @@ func GetTaskDataAndSolveService() http.Handler {
 
 	r.Use(middleware.Logger)
 
-	r.Get(
-		"/tasks/{name}",
-		func(rw http.ResponseWriter, r *http.Request) {
-			taskName := chi.URLParam(r, "name")
+	var rj models.ResultJson
+	var isErr bool
+	var taskName string
+	rootCtx := context.Background()
 
+	r.Group(func(r chi.Router) {
+		r.Get("/tasks/{name}", func(rw http.ResponseWriter, r *http.Request) {
+			var err error
+			defer func() {
+				if err != nil {
+					isErr = true
+				}
+			}()
+
+			taskName = chi.URLParam(r, "name")
+			// TODO: Remove this and handle "task/" in diffrent service
 			if taskName == "" {
-				fmt.Println("No task name received.")
-				rw.WriteHeader(http.StatusNotFound)
+				stdInternalServerError(&rw, err, "No task name provided.")
 				return
 			}
 
 			resp, err := http.Get("http://" + config.DataProviderAddr + "/tasks/" + taskName)
 			if err != nil {
-				rw.Write([]byte(err.Error() + "\nCouldn get data from provider."))
-				rw.WriteHeader(resp.StatusCode)
+				stdInternalServerError(&rw, err, "Couldn get data from provider.")
 				return
 			}
 
 			if resp.StatusCode != http.StatusOK {
-				rw.Write([]byte(err.Error() + "\nBad response from provider."))
-				rw.WriteHeader(resp.StatusCode)
+				stdInternalServerError(&rw, err, "Bad response from data provider.")
 				return
 			}
 
-			// should I atomically write to solution body
-			// while solving multiple tasks asynchronously?
-			// maybe later
-
 			content, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				rw.Write([]byte(err.Error()))
-				rw.WriteHeader(http.StatusInternalServerError)
+				stdInternalServerError(&rw, err, "Couldn't read response contents.")
 				return
 			}
 			rw.Write(append([]byte("Data received succesfully\n"), content...))
@@ -57,18 +62,54 @@ func GetTaskDataAndSolveService() http.Handler {
 			var data [][]interface{}
 			err = json.Unmarshal(content, &data)
 			if err != nil {
-				rw.Write([]byte(err.Error()))
-				rw.WriteHeader(http.StatusInternalServerError)
+				stdInternalServerError(&rw, err, "")
 				return
 			}
 
-			var resA [][][]float64
-			var resK []float64
-			rootCtx := context.Background()
 			taskCtx := context.WithValue(rootCtx, "name", taskName)
-			go solver_wrappers.SelectWrapper(data, taskCtx) // TODO: Reuse content when sending response to server
-		},
-	)
+			rr, err := solver_wrappers.SelectWrapper(data, taskCtx)
+			if err != nil {
+				stdInternalServerError(&rw, err, "Error occured during solving.")
+				return
+			}
+
+			rj, err = models.NewResultJson(rr, data, taskCtx)
+			if err != nil {
+				stdInternalServerError(&rw, err, "Error occured during response packaging.")
+				return
+			}
+		})
+
+		if isErr {
+			fmt.Println("Error occured in handlerFn.")
+			return
+		}
+
+		r.Post("/tasks/"+taskName, func(rw http.ResponseWriter, r *http.Request) {
+			req, err := json.Marshal(rj)
+			if err != nil {
+				stdInternalServerError(&rw, err, "Couldn't package request data.")
+				return
+			}
+
+			resp, err := http.Post("http://"+config.DataProviderAddr+"/tasks/solution", "application/json", bytes.NewBuffer(req))
+			if err != nil {
+				stdInternalServerError(&rw, err, "Couldn't send data to provider")
+			}
+
+			content, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				stdInternalServerError(&rw, err, "Couldn't read response contents.")
+				return
+			}
+			rw.Write(append([]byte("Response received succesfully\n"), content...))
+		})
+	})
 
 	return r
+}
+
+func stdInternalServerError(rw *http.ResponseWriter, err error, msg string) {
+	(*rw).Write([]byte(err.Error() + "\n" + msg))
+	(*rw).WriteHeader(http.StatusInternalServerError)
 }

@@ -2,27 +2,25 @@ package solver_wrappers
 
 import (
 	"errors"
-	"fmt"
 	"mservice/converters"
+	"mservice/models"
 	"mservice/solvers"
 	"reflect"
 	"sync"
 )
 
-func SolveForCyclicRotation(data [][]interface{}) ([][][]float64, []float64, error) {
+func SolveForCyclicRotation(data [][]interface{}) (models.ResultRaw, error) {
 	var wg sync.WaitGroup
 
-	var resK []float64 = make([]float64, len(data))
-	var resA [][][]float64 = make([][][]float64, len(data))
-	for i := range resA {
-		resA[i] = make([][]float64, 2)
+	var rotated [][][]float64 = make([][][]float64, len(data))
+	for i := range rotated {
 		ra := reflect.ValueOf(data[i][0])
 		switch ra.Kind() {
 		case reflect.Slice:
-			resA[i][0] = make([]float64, ra.Len())
-			resA[i][1] = make([]float64, ra.Len())
+			rotated[i] = make([][]float64, 1)
+			rotated[i][0] = make([]float64, ra.Len())
 		default:
-			return nil, nil, errors.New("slice not found in the input data, slice was expected")
+			return models.ResultRaw{}, errors.New("slice not found in the input data, slice was expected")
 		}
 	}
 
@@ -39,29 +37,18 @@ func SolveForCyclicRotation(data [][]interface{}) ([][][]float64, []float64, err
 				panic(err)
 			}
 
-			arrRot := make([]float64, len(arr))
-			copy(arrRot, arr)
+			solvers.CyclicRotation(arr, k)
 
-			solvers.CyclicRotation(arrRot, k)
-
-			copy(resA[index][0], arr)
-			copy(resA[index][1], arrRot)
-			resK[index] = k
+			copy(rotated[index][0], arr)
 
 			wg.Done()
 		}(i)
 	}
 	wg.Wait()
 
-	for i := range resA {
-		fmt.Println("Original:")
-		fmt.Println(resA[i][0])
-		fmt.Println("Rotation size:")
-		fmt.Println(resK[i])
-		fmt.Println("Rotated:")
-		fmt.Println(resA[i][1])
-		fmt.Println()
+	solution := models.ResultRaw{
+		ResultArrs: rotated,
 	}
 
-	return resA, resK, nil
+	return solution, nil
 }
