@@ -1,8 +1,6 @@
 package models
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"mservice/config"
 )
@@ -15,44 +13,43 @@ type ResultJson struct {
 
 type payloadsToResults struct {
 	Payloads [][]interface{} `json:"payload"`
-	Results  [][]float64     `json:"results"`
+	Results  []interface{}   `json:"results"`
 }
 
-func NewResult(payloads [][]interface{}, results [][]float64, taskName string) (ResultJson, error) {
-	rj := ResultJson{}
-
-	switch taskName {
-	case config.CycliclShift:
-		rj = ResultJson{
-			UserName: config.UserName,
-			TaskName: taskName,
-			Results: payloadsToResults{
-				Payloads: payloads,
-				Results:  results,
-			},
-		}
+func NewResultWith2DArr(payloads [][]interface{}, results [][]float64, taskName string) ResultJson {
+	pToRes := payloadsToResults{}
+	pToRes.Payloads = payloads
+	pToRes.Results = make([]interface{}, len(results))
+	for i := range pToRes.Results {
+		pToRes.Results[i] = make([]interface{}, len(results[i]))
+		pToRes.Results[i] = results[i]
 	}
 
-	return rj, nil
+	rj := ResultJson{
+		UserName: config.UserName,
+		TaskName: taskName,
+		Results:  pToRes,
+	}
+
+	return rj
 }
 
-func NewResultFromRaw(rr ResultRaw, data [][]interface{}, ctx context.Context) (ResultJson, error) {
-	var rj ResultJson
-	switch ctx.Value("name") {
-	case config.CycliclShift:
-		rj = ResultJson{
-			UserName: config.UserName,
-			TaskName: ctx.Value("name").(string),
-			Results: payloadsToResults{
-				Payloads: data,
-				Results:  rr.ResultArrs,
-			},
-		}
-	default:
-		return ResultJson{}, errors.New("no such task name")
+func NewResultWith1DArr(payloads [][]interface{}, results []float64, taskName string) ResultJson {
+
+	pToRes := payloadsToResults{}
+	pToRes.Payloads = payloads
+	pToRes.Results = make([]interface{}, len(results))
+	for i := range pToRes.Results {
+		pToRes.Results[i] = results[i]
 	}
 
-	return rj, nil
+	rj := ResultJson{
+		UserName: config.UserName,
+		TaskName: taskName,
+		Results:  pToRes,
+	}
+
+	return rj
 }
 
 func (rj ResultJson) Print() {
@@ -64,7 +61,7 @@ func (rj ResultJson) Print() {
 }
 
 func (rj ResultJson) Empty() (res bool) {
-	res = res && (rj.UserName == "")
+	res = (rj.UserName == "")
 	res = res && (rj.TaskName == "")
 	res = res && (len(rj.Results.Payloads) == 0)
 	res = res && (len(rj.Results.Results) == 0)

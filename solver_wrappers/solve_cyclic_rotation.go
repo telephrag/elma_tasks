@@ -27,12 +27,12 @@ func SolveForCyclicRotation(data [][]interface{}) (models.ResultJson, error) {
 	wg.Add(len(data))
 	for i := range data {
 		go func(index int) {
-			arr, err := converters.GetArrayAt(data, index)
+			arr, err := converters.GetF64ArrAt(data, index)
 			if err != nil {
 				panic(err)
 			}
 
-			k, err := converters.GetFloatAt(data, index)
+			k, err := converters.GetF64At(data, index)
 			if err != nil {
 				panic(err)
 			}
@@ -46,10 +46,7 @@ func SolveForCyclicRotation(data [][]interface{}) (models.ResultJson, error) {
 	}
 	wg.Wait()
 
-	solution, err := models.NewResult(data, rotated, config.CycliclShift)
-	if err != nil {
-		return models.ResultJson{}, errors.New("failed to pack result into struct")
-	}
+	solution := models.NewResultWith2DArr(data, rotated, config.CycliclShift)
 
 	return solution, nil
 }

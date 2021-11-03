@@ -14,7 +14,7 @@ func main() {
 	go func() {
 		err := http.ListenAndServe(
 			config.LocalAddr,
-			services.GetTaskDataAndSolveService(),
+			services.GetTaskDataAndSolve(),
 		)
 
 		if err != nil {

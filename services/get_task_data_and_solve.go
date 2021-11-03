@@ -15,7 +15,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 )
 
-func GetTaskDataAndSolveService() http.Handler {
+func GetTaskDataAndSolve() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
@@ -55,7 +55,7 @@ func GetTaskDataAndSolveService() http.Handler {
 			return
 		}
 
-		// Do I really need context here?
+		// Consider adding timeout to context
 		taskCtx := context.WithValue(rootCtx, "name", taskName)
 		rj, err := solver_wrappers.SelectWrapper(data, taskCtx)
 		if err != nil {
@@ -95,10 +95,8 @@ func GetTaskDataAndSolveService() http.Handler {
 		}
 	})
 
-	// TODO: Try debuging request with Post and Get bodies combined
 	// TODO: Try using middleware as shown here: https://go-chi.io/#/pages/middleware
 	// TODO: Try middleware chains as shown here: https://stackoverflow.com/questions/49025811/http-handler-function
-	// TODO: Try making this function return function that returns http.Handler (one that makes POST request)
 	return r
 }
 

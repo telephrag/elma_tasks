@@ -5,6 +5,7 @@ import (
 	"errors"
 	"mservice/config"
 	"mservice/models"
+	"mservice/solvers"
 )
 
 func SelectWrapper(data [][]interface{}, ctx context.Context) (models.ResultJson, error) {
@@ -12,16 +13,26 @@ func SelectWrapper(data [][]interface{}, ctx context.Context) (models.ResultJson
 	var solution models.ResultJson
 	var err error
 
-	switch ctx.Value("name") {
+	taskName, ok := ctx.Value("name").(string)
+	if !ok {
+		return models.ResultJson{}, errors.New("invalid context received")
+	}
+
+	switch taskName {
 	case config.CycliclShift:
 		solution, err = SolveForCyclicRotation(data)
-		if err != nil {
-			return models.ResultJson{}, errors.New("failed during task solving")
-		}
 	case config.Warrentries:
-
+		solution, err = SolveForOthers(data, solvers.Warrentries, taskName)
+	case config.AbscentElem:
+		solution, err = SolveForOthers(data, solvers.AbscentElem, taskName)
+	case config.SequenceCheck:
+		solution, err = SolveForOthers(data, solvers.SequenceCheck, taskName)
 	case "":
 		return models.ResultJson{}, errors.New("no task name were specified")
+	}
+
+	if err != nil {
+		return models.ResultJson{}, errors.New("failed during task solving")
 	}
 
 	return solution, nil
