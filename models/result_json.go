@@ -14,11 +14,29 @@ type ResultJson struct {
 }
 
 type payloadsToResults struct {
-	Payloads [][]interface{} `json:"payloads"`
-	Results  [][][]float64   `json:"results"`
+	Payloads [][]interface{} `json:"payload"`
+	Results  [][]float64     `json:"results"`
 }
 
-func NewResultJson(rr ResultRaw, data [][]interface{}, ctx context.Context) (ResultJson, error) {
+func NewResult(payloads [][]interface{}, results [][]float64, taskName string) (ResultJson, error) {
+	rj := ResultJson{}
+
+	switch taskName {
+	case config.CycliclShift:
+		rj = ResultJson{
+			UserName: config.UserName,
+			TaskName: taskName,
+			Results: payloadsToResults{
+				Payloads: payloads,
+				Results:  results,
+			},
+		}
+	}
+
+	return rj, nil
+}
+
+func NewResultFromRaw(rr ResultRaw, data [][]interface{}, ctx context.Context) (ResultJson, error) {
 	var rj ResultJson
 	switch ctx.Value("name") {
 	case config.CycliclShift:
@@ -41,7 +59,7 @@ func (rj ResultJson) Print() {
 	fmt.Printf("User name: %s\n", rj.UserName)
 	fmt.Printf("Task:      %s\n", rj.TaskName)
 	fmt.Printf("Results:\n")
-	fmt.Println("	Payloads: \n		", rj.Results.Payloads)
+	fmt.Println("	Payload: \n		", rj.Results.Payloads)
 	fmt.Println("	Results:  \n		", rj.Results.Results)
 }
 

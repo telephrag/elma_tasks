@@ -2,6 +2,7 @@ package solver_wrappers
 
 import (
 	"errors"
+	"mservice/config"
 	"mservice/converters"
 	"mservice/models"
 	"mservice/solvers"
@@ -9,18 +10,17 @@ import (
 	"sync"
 )
 
-func SolveForCyclicRotation(data [][]interface{}) (models.ResultRaw, error) {
+func SolveForCyclicRotation(data [][]interface{}) (models.ResultJson, error) {
 	var wg sync.WaitGroup
 
-	var rotated [][][]float64 = make([][][]float64, len(data))
+	var rotated [][]float64 = make([][]float64, len(data))
 	for i := range rotated {
 		ra := reflect.ValueOf(data[i][0])
 		switch ra.Kind() {
 		case reflect.Slice:
-			rotated[i] = make([][]float64, 1)
-			rotated[i][0] = make([]float64, ra.Len())
+			rotated[i] = make([]float64, ra.Len())
 		default:
-			return models.ResultRaw{}, errors.New("slice not found in the input data, slice was expected")
+			return models.ResultJson{}, errors.New("slice not found in the input data, slice was expected")
 		}
 	}
 
@@ -39,15 +39,16 @@ func SolveForCyclicRotation(data [][]interface{}) (models.ResultRaw, error) {
 
 			solvers.CyclicRotation(arr, k)
 
-			copy(rotated[index][0], arr)
+			copy(rotated[index], arr)
 
 			wg.Done()
 		}(i)
 	}
 	wg.Wait()
 
-	solution := models.ResultRaw{
-		ResultArrs: rotated,
+	solution, err := models.NewResult(data, rotated, config.CycliclShift)
+	if err != nil {
+		return models.ResultJson{}, errors.New("failed to pack result into struct")
 	}
 
 	return solution, nil

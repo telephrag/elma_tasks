@@ -18,7 +18,7 @@ func main() {
 		)
 
 		if err != nil {
-			// TODO: add error handling
+			panic(err)
 		}
 
 	}()

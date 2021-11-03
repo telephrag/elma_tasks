@@ -17,99 +17,93 @@ import (
 
 func GetTaskDataAndSolveService() http.Handler {
 	r := chi.NewRouter()
-
 	r.Use(middleware.Logger)
 
-	var rj models.ResultJson
-	var isErr bool
-	var taskName string
 	rootCtx := context.Background()
 
-	r.Group(func(r chi.Router) {
-		r.Get("/tasks/{name}", func(rw http.ResponseWriter, r *http.Request) {
-			var err error
-			defer func() {
-				if err != nil {
-					isErr = true
-				}
-			}()
-
-			taskName = chi.URLParam(r, "name")
-			// TODO: Remove this and handle "task/" in diffrent service
-			if taskName == "" {
-				stdInternalServerError(&rw, err, "No task name provided.")
-				return
-			}
-
-			resp, err := http.Get("http://" + config.DataProviderAddr + "/tasks/" + taskName)
-			if err != nil {
-				stdInternalServerError(&rw, err, "Couldn get data from provider.")
-				return
-			}
-
-			if resp.StatusCode != http.StatusOK {
-				stdInternalServerError(&rw, err, "Bad response from data provider.")
-				return
-			}
-
-			content, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				stdInternalServerError(&rw, err, "Couldn't read response contents.")
-				return
-			}
-			rw.Write(append([]byte("Data received succesfully\n"), content...))
-
-			var data [][]interface{}
-			err = json.Unmarshal(content, &data)
-			if err != nil {
-				stdInternalServerError(&rw, err, "")
-				return
-			}
-
-			taskCtx := context.WithValue(rootCtx, "name", taskName)
-			rr, err := solver_wrappers.SelectWrapper(data, taskCtx)
-			if err != nil {
-				stdInternalServerError(&rw, err, "Error occured during solving.")
-				return
-			}
-
-			rj, err = models.NewResultJson(rr, data, taskCtx)
-			if err != nil {
-				stdInternalServerError(&rw, err, "Error occured during response packaging.")
-				return
-			}
-		})
-
-		if isErr {
-			fmt.Println("Error occured in handlerFn.")
+	r.Get("/tasks/{name}", func(rw http.ResponseWriter, r *http.Request) {
+		taskName := chi.URLParam(r, "name")
+		// TODO: Remove this and handle "task/" in diffrent service
+		if taskName == "" {
+			stdInternalServerError(&rw, nil, "No task name provided.")
 			return
 		}
 
-		r.Post("/tasks/"+taskName, func(rw http.ResponseWriter, r *http.Request) {
-			req, err := json.Marshal(rj)
-			if err != nil {
-				stdInternalServerError(&rw, err, "Couldn't package request data.")
-				return
-			}
+		resp, err := http.Get("http://" + config.DataProviderAddr + "/tasks/" + taskName)
+		if err != nil {
+			stdInternalServerError(&rw, err, "Couldn get data from provider.")
+			return
+		}
 
-			resp, err := http.Post("http://"+config.DataProviderAddr+"/tasks/solution", "application/json", bytes.NewBuffer(req))
-			if err != nil {
-				stdInternalServerError(&rw, err, "Couldn't send data to provider")
-			}
+		if resp.StatusCode != http.StatusOK {
+			rw.WriteHeader(resp.StatusCode)
+			return
+		}
 
-			content, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				stdInternalServerError(&rw, err, "Couldn't read response contents.")
-				return
-			}
-			rw.Write(append([]byte("Response received succesfully\n"), content...))
-		})
+		content, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			stdInternalServerError(&rw, err, "Couldn't read response contents.")
+			return
+		}
+		rw.Write(append([]byte("Data received succesfully\n"), content...))
+		resp.Body.Close()
+
+		var data [][]interface{}
+		err = json.Unmarshal(content, &data)
+		if err != nil {
+			stdInternalServerError(&rw, err, "")
+			return
+		}
+
+		// Do I really need context here?
+		taskCtx := context.WithValue(rootCtx, "name", taskName)
+		rj, err := solver_wrappers.SelectWrapper(data, taskCtx)
+		if err != nil {
+			stdInternalServerError(&rw, err, "Error occured during solving.")
+			return
+		}
+
+		rw.Header().Set("Content-type", "application/json")
+
+		req, err := json.Marshal(rj)
+		if err != nil {
+			stdInternalServerError(&rw, err, "Couldn't package request data.")
+			return
+		}
+
+		resp, err = http.Post("http://"+config.DataProviderAddr+"/tasks/solution", "application/json", bytes.NewBuffer(req))
+		if err != nil {
+			stdInternalServerError(&rw, err, "Couldn't send data to provider")
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			rw.WriteHeader(resp.StatusCode)
+			return
+		}
+
+		content, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			stdInternalServerError(&rw, err, "Couldn't read response contents.")
+			return
+		}
+		rw.Write(append([]byte("Response received succesfully\n"), content...))
+
+		var res models.Response
+		err = json.Unmarshal(content, &res)
+		if err != nil {
+			stdInternalServerError(&rw, err, "Couldn't unmarshal response from the server.")
+		}
 	})
 
+	// TODO: Try debuging request with Post and Get bodies combined
+	// TODO: Try using middleware as shown here: https://go-chi.io/#/pages/middleware
+	// TODO: Try middleware chains as shown here: https://stackoverflow.com/questions/49025811/http-handler-function
+	// TODO: Try making this function return function that returns http.Handler (one that makes POST request)
 	return r
 }
 
 func stdInternalServerError(rw *http.ResponseWriter, err error, msg string) {
-	(*rw).Write([]byte(err.Error() + "\n" + msg))
-	(*rw).WriteHeader(http.StatusInternalServerError)
+	fmt.Println(msg)
+	// (*rw).Write([]byte(err.Error() + "\n" + msg))
+	// (*rw).WriteHeader(http.StatusInternalServerError)
 }
