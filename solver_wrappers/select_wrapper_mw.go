@@ -1,16 +1,26 @@
 package solver_wrappers
 
 import (
+	"context"
 	"errors"
 	"mservice/config"
 	"mservice/models"
 	"mservice/solvers"
 )
 
-func SelectWrapper(data [][]interface{}, taskName string) (models.ResultJson, error) {
-
+func SelectWrapperMw(ctx context.Context) (models.ResultJson, error) {
 	var solution models.ResultJson
 	var err error
+
+	taskName, ok := ctx.Value("taskName").(string)
+	if !ok {
+		return models.ResultJson{}, errors.New("invalid context received")
+	}
+
+	data, ok := ctx.Value("inputData").([][]interface{})
+	if !ok {
+		return models.ResultJson{}, errors.New("invalid context received")
+	}
 
 	switch taskName {
 	case config.CycliclShift:
