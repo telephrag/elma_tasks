@@ -6,11 +6,12 @@ import (
 	"sync"
 )
 
-func SolveForOthers(data [][]interface{}, solver func([]float64) float64, taskName string) (models.ResultJson, error) {
-	var wg sync.WaitGroup
+func SolveForOthers(task models.Task, solver func([]float64) float64) (models.Result, error) {
 
+	data := task.Data
 	var res []float64 = make([]float64, len(data))
 
+	var wg sync.WaitGroup
 	wg.Add(len(data))
 	for i := range data {
 		go func(index int) {
@@ -26,7 +27,7 @@ func SolveForOthers(data [][]interface{}, solver func([]float64) float64, taskNa
 	}
 	wg.Wait()
 
-	solution := models.NewResultWith1DArr(data, res, taskName)
+	solution := models.NewResultWith1DArr(task, res)
 
 	return solution, nil
 }

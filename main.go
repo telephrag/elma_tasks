@@ -2,8 +2,7 @@ package main
 
 import (
 	"mservice/config"
-	"mservice/internal"
-	"mservice/public"
+	"mservice/services"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,7 +14,7 @@ func main() {
 	go func() {
 		err := http.ListenAndServe(
 			config.LocalPublicAddr,
-			public.GetDataAndSolve(),
+			services.GetDataAndSolveService(),
 		)
 
 		if err != nil {
@@ -26,7 +25,7 @@ func main() {
 	go func() {
 		err := http.ListenAndServe(
 			config.LocalInternalAddr,
-			internal.InternalService(),
+			services.InternalService(),
 		)
 
 		if err != nil {

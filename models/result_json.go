@@ -5,7 +5,7 @@ import (
 	"mservice/config"
 )
 
-type ResultJson struct {
+type Result struct {
 	UserName string            `json:"user_name"`
 	TaskName string            `json:"task"`
 	Results  payloadsToResults `json:"results"`
@@ -16,43 +16,43 @@ type payloadsToResults struct {
 	Results  []interface{}   `json:"results"`
 }
 
-func NewResultWith2DArr(payloads [][]interface{}, results [][]float64, taskName string) ResultJson {
+func NewResultWith2DArr(task Task, results [][]float64) Result {
 	pToRes := payloadsToResults{}
-	pToRes.Payloads = payloads
+	pToRes.Payloads = task.Data
 	pToRes.Results = make([]interface{}, len(results))
 	for i := range pToRes.Results {
 		pToRes.Results[i] = make([]interface{}, len(results[i]))
 		pToRes.Results[i] = results[i]
 	}
 
-	rj := ResultJson{
+	rj := Result{
 		UserName: config.UserName,
-		TaskName: taskName,
+		TaskName: task.TaskName,
 		Results:  pToRes,
 	}
 
 	return rj
 }
 
-func NewResultWith1DArr(payloads [][]interface{}, results []float64, taskName string) ResultJson {
+func NewResultWith1DArr(task Task, results []float64) Result {
 
 	pToRes := payloadsToResults{}
-	pToRes.Payloads = payloads
+	pToRes.Payloads = task.Data
 	pToRes.Results = make([]interface{}, len(results))
 	for i := range pToRes.Results {
 		pToRes.Results[i] = results[i]
 	}
 
-	rj := ResultJson{
+	rj := Result{
 		UserName: config.UserName,
-		TaskName: taskName,
+		TaskName: task.TaskName,
 		Results:  pToRes,
 	}
 
 	return rj
 }
 
-func (rj ResultJson) Print() {
+func (rj Result) Print() {
 	fmt.Printf("User name: %s\n", rj.UserName)
 	fmt.Printf("Task:      %s\n", rj.TaskName)
 	fmt.Printf("Results:\n")
@@ -60,7 +60,7 @@ func (rj ResultJson) Print() {
 	fmt.Println("	Results:  \n		", rj.Results.Results)
 }
 
-func (rj ResultJson) Empty() (res bool) {
+func (rj Result) Empty() (res bool) {
 	res = (rj.UserName == "")
 	res = res && (rj.TaskName == "")
 	res = res && (len(rj.Results.Payloads) == 0)

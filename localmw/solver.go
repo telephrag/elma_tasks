@@ -1,9 +1,10 @@
-package internal
+package localmw
 
 import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
+	"mservice/models"
 	"mservice/solver_wrappers"
 	"mservice/util"
 	"net/http"
@@ -23,21 +24,20 @@ func Solver(next http.Handler) http.Handler {
 		}
 		r.Body.Close()
 
-		var data [][]interface{}
-		err = json.Unmarshal(reqBody, &data)
+		var tasks []models.Task
+		err = json.Unmarshal(reqBody, &tasks)
 		if err != nil {
 			errMsg = "Failed to unmarshal data.\n"
 			return
 		}
 
-		taskName := r.Header.Get("taskName")
-		rj, err := solver_wrappers.SelectWrapper(data, taskName)
+		res, err := solver_wrappers.SelectWrapper(tasks)
 		if err != nil {
 			errMsg = "Failed to solve using given data.\n"
 			return
 		}
 
-		ctxWithResult := context.WithValue(r.Context(), "result", rj)
+		ctxWithResult := context.WithValue(r.Context(), "results", res)
 
 		next.ServeHTTP(rw, r.Clone(ctxWithResult))
 	})

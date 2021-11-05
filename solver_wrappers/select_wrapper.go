@@ -1,32 +1,60 @@
 package solver_wrappers
 
 import (
+	"context"
 	"errors"
 	"mservice/config"
 	"mservice/models"
 	"mservice/solvers"
+	"sync"
 )
 
-func SelectWrapper(data [][]interface{}, taskName string) (models.ResultJson, error) {
+func SelectWrapper(tasks []models.Task) ([]models.Result, error) {
 
-	var solution models.ResultJson
+	var solution []models.Result = make([]models.Result, len(tasks))
 	var err error
 
-	switch taskName {
-	case config.CycliclShift:
-		solution, err = SolveForCyclicRotation(data)
-	case config.Warrentries:
-		solution, err = SolveForOthers(data, solvers.Warrentries, taskName)
-	case config.AbscentElem:
-		solution, err = SolveForOthers(data, solvers.AbscentElem, taskName)
-	case config.SequenceCheck:
-		solution, err = SolveForOthers(data, solvers.SequenceCheck, taskName)
-	case "":
-		return models.ResultJson{}, errors.New("no task name were specified")
+	var wg sync.WaitGroup
+	var mu sync.Locker
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
+	wg.Add(len(tasks))
+	for i := range tasks {
+		go func(index int, cancelCtx context.Context) {
+			defer wg.Done()
+
+			taskName := tasks[index].TaskName
+
+			switch taskName {
+			case config.CycliclShift:
+				solution[index], err = SolveForCyclicRotation(tasks[index])
+			case config.Warrentries:
+				solution[index], err = SolveForOthers(tasks[index], solvers.Warrentries)
+			case config.AbscentElem:
+				solution[index], err = SolveForOthers(tasks[index], solvers.AbscentElem)
+			case config.SequenceCheck:
+				solution[index], err = SolveForOthers(tasks[index], solvers.SequenceCheck)
+			case "":
+				mu.Lock()
+				err = errors.New("no task name were specified")
+				mu.Unlock()
+				cancelFunc()
+			}
+
+			if err != nil {
+				mu.Lock()
+				err = errors.New("no task name were specified")
+				mu.Unlock()
+				cancelFunc()
+			}
+		}(i, ctx)
 	}
+	wg.Wait()
 
 	if err != nil {
-		return models.ResultJson{}, errors.New("failed during task solving")
+		return nil, err
 	}
 
 	return solution, nil

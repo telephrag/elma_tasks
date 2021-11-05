@@ -2,7 +2,6 @@ package solver_wrappers
 
 import (
 	"errors"
-	"mservice/config"
 	"mservice/converters"
 	"mservice/models"
 	"mservice/solvers"
@@ -10,8 +9,9 @@ import (
 	"sync"
 )
 
-func SolveForCyclicRotation(data [][]interface{}) (models.ResultJson, error) {
-	var wg sync.WaitGroup
+func SolveForCyclicRotation(task models.Task) (models.Result, error) {
+
+	var data [][]interface{} = task.Data
 
 	var rotated [][]float64 = make([][]float64, len(data))
 	for i := range rotated {
@@ -20,10 +20,11 @@ func SolveForCyclicRotation(data [][]interface{}) (models.ResultJson, error) {
 		case reflect.Slice:
 			rotated[i] = make([]float64, ra.Len())
 		default:
-			return models.ResultJson{}, errors.New("slice not found in the input data, slice was expected")
+			return models.Result{}, errors.New("slice not found in the input data, slice was expected")
 		}
 	}
 
+	var wg sync.WaitGroup
 	wg.Add(len(data))
 	for i := range data {
 		go func(index int) {
@@ -46,7 +47,7 @@ func SolveForCyclicRotation(data [][]interface{}) (models.ResultJson, error) {
 	}
 	wg.Wait()
 
-	solution := models.NewResultWith2DArr(data, rotated, config.CycliclShift)
+	solution := models.NewResultWith2DArr(task, rotated)
 
 	return solution, nil
 }
