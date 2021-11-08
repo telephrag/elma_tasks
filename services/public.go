@@ -2,6 +2,7 @@ package services
 
 import (
 	"mservice/handlerfuncs"
+	"mservice/localmw"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -13,8 +14,8 @@ func GetDataAndSolveService() http.Handler {
 	r.Use(middleware.Logger)
 
 	r.Route("/tasks", func(r chi.Router) {
-		r.Get("/{name}", handlerfuncs.GetDataAndSolve)
-		r.Get("/", handlerfuncs.GetDataAndSolve)
+		r.With(localmw.TaskFromURL).Get("/{name}", handlerfuncs.GetDataAndSolve)
+		r.With(localmw.TaskParser).Get("/", handlerfuncs.GetDataAndSolve)
 	})
 
 	return r

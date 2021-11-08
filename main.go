@@ -33,6 +33,17 @@ func main() {
 		}
 	}()
 
+	go func() {
+		err := http.ListenAndServe(
+			config.MockAddr,
+			services.MockService(),
+		)
+
+		if err != nil {
+			panic(err)
+		}
+	}()
+
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, syscall.SIGTERM, syscall.SIGINT)
 	<-interrupt

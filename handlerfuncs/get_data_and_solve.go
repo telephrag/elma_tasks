@@ -10,8 +10,6 @@ import (
 	"mservice/models"
 	"mservice/util"
 	"net/http"
-
-	"github.com/go-chi/chi"
 )
 
 func GetDataAndSolve(rw http.ResponseWriter, r *http.Request) {
@@ -20,21 +18,18 @@ func GetDataAndSolve(rw http.ResponseWriter, r *http.Request) {
 	var code int
 	defer util.HttpErrWriter(rw, err, code)
 
-	taskName := chi.URLParam(r, "name")
-	var tasks []string
-
-	if taskName != "" { // consider moving this to middleware
-		tasks = append(tasks, taskName)
-	} else {
-		tasks = config.TaskNames[:]
+	tasks, ok := r.Context().Value("tasks").([]string)
+	if !ok {
+		err = errors.New(config.CtxWrongType)
+		return
 	}
 
-	tdc, err := GetTasks(tasks, rw)
+	tc, err := GetTasks(tasks, rw)
 	if err != nil {
 		return
 	}
 
-	reqBody, err := json.Marshal(tdc)
+	reqBody, err := json.Marshal(tc)
 	if err != nil {
 		return
 	}
