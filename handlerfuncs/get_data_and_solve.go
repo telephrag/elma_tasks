@@ -16,9 +16,9 @@ import (
 
 func GetDataAndSolve(rw http.ResponseWriter, r *http.Request) {
 
-	var err error = nil
-	var errMsg string = ""
-	defer util.Ordinary500(rw, err, errMsg)
+	var err error
+	var code int
+	defer util.HttpErrWriter(rw, err, code)
 
 	taskName := chi.URLParam(r, "name")
 	var tasks []string
@@ -31,13 +31,11 @@ func GetDataAndSolve(rw http.ResponseWriter, r *http.Request) {
 
 	tdc, err := GetTasks(tasks, rw)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	reqBody, err := json.Marshal(tdc)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -46,26 +44,23 @@ func GetDataAndSolve(rw http.ResponseWriter, r *http.Request) {
 		config.ProtoHttp+config.LocalInternalAddr+"/tasks/solution",
 		bytes.NewBuffer(reqBody),
 	)
-	postReq.Header.Set("Content-Type", "application/json")
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	postReq.Header.Set("Content-Type", "application/json")
+
 	resp, err := http.DefaultClient.Do(postReq)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	if resp.StatusCode != http.StatusOK {
-		rw.WriteHeader(resp.StatusCode)
+		code = resp.StatusCode
 		return
 	}
 
 	content, err := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	rw.Write(content)

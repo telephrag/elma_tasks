@@ -15,7 +15,7 @@ func InternalService() http.Handler {
 
 	r.Route("/tasks", func(r chi.Router) {
 		r.Get("/{name}", handlerfuncs.GetTaskData)
-		r.With(localmw.Solver).Post("/solution", handlerfuncs.PostBack)
+		r.With(localmw.Solver, localmw.Printer).Post("/solution", handlerfuncs.PostBack)
 	})
 
 	return r

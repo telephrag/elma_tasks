@@ -14,24 +14,29 @@ import (
 
 func PostBack(rw http.ResponseWriter, r *http.Request) {
 
-	var errMsg string = ""
-	var err error = nil
-	defer util.Ordinary500(rw, err, errMsg)
+	var err error
+	code := 0
+	defer util.HttpErrWriter(rw, err, code)
 
 	res, ok := r.Context().Value("results").([]models.Result)
 	if !ok {
-		http.Error(rw, "Wrong type arrived with request.", http.StatusInternalServerError)
+		err = errors.New(config.CtxWrongType)
+		return
 	}
 
 	resp, err := PostTasks(res, rw)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	rw.Write([]byte(fmt.Sprint(resp)))
 }
 
 func PostTask(res models.Result, rw http.ResponseWriter) (*http.Response, error) {
+
+	var err error
+	code := 0
+	defer util.HttpErrWriter(rw, err, code)
 
 	req, err := json.Marshal(res)
 	if err != nil {
@@ -46,8 +51,8 @@ func PostTask(res models.Result, rw http.ResponseWriter) (*http.Response, error)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		rw.WriteHeader(resp.StatusCode)
-		return nil, errors.New(fmt.Sprint(resp.StatusCode))
+		code = resp.StatusCode
+		return nil, errors.New("")
 	}
 
 	return resp, nil

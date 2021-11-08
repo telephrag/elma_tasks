@@ -25,6 +25,12 @@ func SelectWrapper(tasks []models.Task) ([]models.Result, error) {
 		go func(index int, cancelCtx context.Context) {
 			defer wg.Done()
 
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
 			taskName := tasks[index].TaskName
 
 			switch taskName {
@@ -38,14 +44,14 @@ func SelectWrapper(tasks []models.Task) ([]models.Result, error) {
 				solution[index], err = SolveForOthers(tasks[index], solvers.SequenceCheck)
 			case "":
 				mu.Lock()
-				err = errors.New("no task name were specified")
+				err = errors.New(config.NoTask)
 				mu.Unlock()
 				cancelFunc()
 			}
 
 			if err != nil {
 				mu.Lock()
-				err = errors.New("no task name were specified")
+				err = errors.New(config.NoTask)
 				mu.Unlock()
 				cancelFunc()
 			}

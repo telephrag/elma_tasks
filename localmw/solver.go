@@ -13,13 +13,12 @@ import (
 func Solver(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 
-		var errMsg string = ""
-		var err error = nil
-		defer util.Ordinary500(rw, err, errMsg)
+		var err error
+		code := 0
+		defer util.HttpErrWriter(rw, err, code)
 
 		reqBody, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			errMsg = "Failed to read from response body.\n"
 			return
 		}
 		r.Body.Close()
@@ -27,13 +26,11 @@ func Solver(next http.Handler) http.Handler {
 		var tasks []models.Task
 		err = json.Unmarshal(reqBody, &tasks)
 		if err != nil {
-			errMsg = "Failed to unmarshal data.\n"
 			return
 		}
 
 		res, err := solver_wrappers.SelectWrapper(tasks)
 		if err != nil {
-			errMsg = "Failed to solve using given data.\n"
 			return
 		}
 
